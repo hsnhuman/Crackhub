@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Blogpost {
+  id         String    @id @default(uuid())
+  title      String
+  content    String
+  game       String
+  authorid   String
+  authorName String
+  createdat  DateTime  @default(now())
+  updatedat  DateTime  @updatedAt
+  scheduled  DateTime
+  chatRoom   ChatRoom? @relation(name: "BlogpostToChatRoom")
+}
+
+model ChatRoom {
+  id         String    @id @default(uuid())
+  name       String
+  messages   Message[]
+  blogpost   Blogpost  @relation(name: "BlogpostToChatRoom", fields: [blogpostId], references: [id])
+  blogpostId String    @unique
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  authorName String
+  content    String
+  createdAt  DateTime @default(now())
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id])
+  chatRoomId String
+}
