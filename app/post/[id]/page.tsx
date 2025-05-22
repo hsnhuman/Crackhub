@@ -1,23 +1,26 @@
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { redirect } from "next/navigation";
 import { prisma } from "../../utils/db";
-import Message from "@/components/general/SendMessage";
 import ChatRoom from "@/components/general/ChatRoom";
+import { auth } from "@/app/auth/auth";
+
+async function getPost(postId: string) {
+  "use server";
+  return prisma.blogpost.findUnique({ where: { id: postId } });
+}
+
 async function getData(postId: string) {
   "use server";
 
   let chatRoom = await prisma.chatRoom.findUnique({
-    where: { blogpostId: postId }, // Check for existing chat room
+    where: { blogpostId: postId },
     include: { messages: true },
   });
 
-  // If no chat room exists, create one
   if (!chatRoom) {
     chatRoom = await prisma.chatRoom.create({
       data: {
         name: `Chat Room for Blogpost ${postId}`,
-        blogpostId: postId, // Link chat room to blog post
+        blogpostId: postId,
       },
       include: { messages: true },
     });
@@ -26,12 +29,45 @@ async function getData(postId: string) {
   return chatRoom ?? { messages: [], name: "Default Room", id: "default-id" };
 }
 
-export default async function Post({ params }: { params: { id: string } }) {
-  const { getUser } = getKindeServerSession();
-  const user = await getUser();
-  const awaitedParams = await params; // Await params before accessing its properties
-  const id = awaitedParams.id;
+async function blocked(chatRoomId: string): Promise<boolean> {
+  "use server";
+  const session = await auth();
+  const user = session?.user;
 
+  if (!user) return false;
+
+  console.log(`Checking block status for chatRoomId: ${chatRoomId}`);
+
+  const block = await prisma.blocked.findFirst({
+    where: { chatRoomId: chatRoomId, userId: user.id, isBlocked: true },
+  });
+
+  console.log(
+    `Block status found: ${block ? "User is blocked" : "User is not blocked"}`
+  );
+
+  return !!block;
+}
+async function getusers() {
+  "use server";
+  const use = await prisma.user.findMany();
+  return use;
+}
+
+export default async function Post({ params }: { params: { id: string } }) {
+  const id = params.id;
+  const user = await getusers();
+  // First, get the chat room associated with the post
   const chatRoom = await getData(id);
-  return <ChatRoom chatRoom={chatRoom} user={user} />;
+
+  // Then, use the chat room ID in the blocked function
+  const isBlocked = await blocked(chatRoom.id);
+
+  if (isBlocked) {
+    return redirect("/blocked"); // Immediately redirect blocked users
+  }
+
+  const post = await getPost(id);
+
+  return <ChatRoom chatRoom={chatRoom} post={post} allusers={user} />;
 }

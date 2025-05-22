@@ -1,7 +1,10 @@
-"use client";
-import { KindeProvider } from "@kinde-oss/kinde-auth-nextjs";
-import { ReactNode } from "react";
+"use client"; // Ensures it runs in client-side components
+import { SessionProvider } from "next-auth/react";
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  return <KindeProvider>{children}</KindeProvider>;
-};
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <SessionProvider>{children}</SessionProvider>;
+}

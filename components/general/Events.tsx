@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BlogpostCard from "@/components/general/BlogpostCard";
 import { handleSubmition } from "@/app/actions";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,31 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-export default function Events({ blogPosts }: EventsProps) {
+
+interface BlogPost {
+  id: string;
+  title: string;
+  content: string;
+}
+
+interface Game {
+  id: string;
+  title: string;
+}
+
+interface EventsProps {
+  blogPosts: BlogPost[];
+  games: Game[];
+}
+
+export default function Events({ blogPosts, games }: EventsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(""); // For filtering games
+  const [selectedGame, setSelectedGame] = useState(""); // Track selected game
+
+  const filteredGames = games.filter((game) =>
+    game.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-r from-blue-500 to-purple-600 px-4 relative">
@@ -29,7 +52,6 @@ export default function Events({ blogPosts }: EventsProps) {
       <div
         className={`w-full max-w-lg mx-auto mb-4 transition-all duration-300 ease-in-out`}
       >
-        {/* Conditionally render or animate height */}
         {isExpanded && (
           <Card className="shadow-lg rounded-lg border-2 border-white bg-white/80 backdrop-blur-md">
             <CardHeader>
@@ -45,6 +67,15 @@ export default function Events({ blogPosts }: EventsProps) {
                   await handleSubmition(formData);
                 }}
               >
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="private"
+                    name="private"
+                    className="w-5 h-5"
+                  />
+                  <label htmlFor="private">Private</label>
+                </div>
                 <div className="flex flex-col gap-2">
                   <label>Title</label>
                   <Input
@@ -54,21 +85,42 @@ export default function Events({ blogPosts }: EventsProps) {
                     placeholder="Title"
                   />
                 </div>
+
                 <div className="flex flex-col gap-2">
-                  <label>Content</label>
+                  <label>Description</label>
                   <Textarea required name="content" placeholder="Content" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label>Game</label>
-                  <Input required type="text" name="game" placeholder="Game" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search for a game..."
+                    className="border rounded px-2 py-1"
+                  />
+                  <select
+                    required
+                    name="game"
+                    value={selectedGame}
+                    onChange={(e) => setSelectedGame(e.target.value)}
+                    className="border rounded px-2 py-1"
+                  >
+                    {filteredGames.map((game) => (
+                      <option key={game.id} value={game.title}>
+                        {game.title}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
                 <div className="flex flex-col gap-2">
                   <label>Scheduled Date & Time</label>
                   <Input
                     required
                     type="datetime-local"
                     name="scheduled_at"
-                    min={new Date().toISOString().slice(0, 16)} // Prevent past selections
+                    min={new Date().toISOString().slice(0, 16)}
                   />
                 </div>
                 <Button type="submit">Create Post</Button>
@@ -90,9 +142,11 @@ export default function Events({ blogPosts }: EventsProps) {
           Events
         </h3>
         <div className="grid md:grid-cols-2 gap-4">
-          {blogPosts.map((post) => (
-            <BlogpostCard key={post.id} post={post} />
-          ))}
+          {blogPosts
+            .filter((post) => !post.private)
+            .map((post) => (
+              <BlogpostCard key={post.id} post={post} />
+            ))}
         </div>
       </div>
     </div>

@@ -1,21 +1,26 @@
-import { buttonVariants } from "@/components/ui/button";
-import {
-  RegisterLink,
-  LoginLink,
-  LogoutLink,
-} from "@kinde-oss/kinde-auth-nextjs/components";
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-
+"use client";
+import { signIn, signOut, useSession } from "next-auth/react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
-export async function Navbar() {
-  const { getUser } = getKindeServerSession();
-  const user = await getUser();
+export function Navbar() {
+  const { data: session } = useSession();
+  const [inviteCount, setInviteCount] = useState(0);
+
+  // Function to fetch latest invite count
+  async function fetchInvites() {
+    const response = await fetch("/api/inviteCount");
+    const data = await response.json();
+    setInviteCount(data.count);
+  }
+
+  // Fetch count on mount and when the session updates
+  useEffect(() => {
+    if (session) fetchInvites();
+  }, [session]);
 
   return (
-    // Change the outer container to a sidebar layout
-    <nav className="fixed top-0 left-0 h-full w-50 bg-gray-100 shadow-md p-4 flex flex-col justify-between">
-      {/* Logo and navigation links */}
+    <nav className="fixed top-0 left-0 h-full w-42 bg-gray-100 shadow-md p-4 flex flex-col justify-between">
       <div>
         <Link href="/">
           <h1 className="text-3xl font-semibold mb-8 cursor-pointer">
@@ -42,26 +47,21 @@ export async function Navbar() {
             Dashboard
           </Link>
 
-          {user ? (
+          {session ? (
             <div className="flex flex-col space-y-2 mt-1">
-              <Link href="/profile" className="flex items-center gap-2">
-                {user.given_name}
+              <Link href="/profile">my events</Link>
+              <Link href="/invite" onClick={() => setInviteCount(0)}>
+                my invites{" "}
+                {inviteCount > 0 && (
+                  <span className="ml-2 text-red-500">({inviteCount})</span>
+                )}
               </Link>
-              <LogoutLink className={buttonVariants({ variant: "secondary" })}>
-                Logout
-              </LogoutLink>
+
+              <Link href="/setting">profile</Link>
+              <button onClick={signOut}>{session.user?.name}, sign out</button>
             </div>
           ) : (
-            <div className="flex flex-col space-y-2 mt-8">
-              <RegisterLink
-                className={buttonVariants({ variant: "secondary" })}
-              >
-                Sign up
-              </RegisterLink>
-              <LoginLink className={buttonVariants({ variant: "secondary" })}>
-                Login
-              </LoginLink>
-            </div>
+            <div className="flex flex-col space-y-2 mt-8"></div>
           )}
         </div>
       </div>
